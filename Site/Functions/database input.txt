@@ -1,0 +1,36 @@
+#r "Newtonsoft.Json"
+
+using System.Net;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Primitives;
+using Newtonsoft.Json;
+using Microsoft.Azure.WebJobs;
+
+public static async Task<IActionResult> Run(HttpRequest req, ILogger log, IAsyncCollector<dynamic> outputDocuments)
+{
+    var requestUtc = DateTime.UtcNow;
+
+    string requestBody = null;
+    using (var bodyReader = new StreamReader(req.Body))
+    {
+        requestBody = await bodyReader.ReadToEndAsync();
+    }
+
+    log.LogInformation($"Request body: {requestBody}");
+
+    var formValues = System.Web.HttpUtility.ParseQueryString(requestBody);
+
+    var outputDocument = new 
+    {
+        requestUtc,
+        partitionKey = requestUtc.ToString("yyyy-MM-dd-T-HH:mm:ss"),
+        firstName = formValues["Nome"],
+        telefone = formValues["Telefone"],
+        email = formValues["Email"],
+        mensagem = formValues["Mensagem"]
+    };
+
+    await outputDocuments.AddAsync(outputDocument);
+
+    return new OkResult();
+}
